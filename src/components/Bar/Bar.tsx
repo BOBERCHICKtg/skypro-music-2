@@ -16,18 +16,20 @@ import ProgressBar from "../ProgressBar/ProgressBar";
 export default function Bar() {
   const currentTrack = useAppSelector((state) => state.tracks.currentTrack);
   const isPlaying = useAppSelector((state) => state.tracks.isPlay);
-  const isShuffle = useAppSelector((state) => state.tracks.isShuffle); // Получаем состояние перемешивания из store
+  const isShuffle = useAppSelector((state) => state.tracks.isShuffle);
   const dispatch = useAppDispatch();
 
   const [isLoop, setIsLoop] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [isLoadedTrack, setIsLoadedTrack] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isLocalPlaying, setIsLocalPlaying] = useState(false);
 
   useEffect(() => {
     setIsLoadedTrack(false);
+    setCurrentTime(0);
   }, [currentTrack]);
 
   if (!currentTrack) return null;
@@ -51,25 +53,24 @@ export default function Bar() {
 
   const onTimeUpdate = () => {
     if (audioRef.current) {
-      console.log(audioRef.current.volume);
+      setCurrentTime(audioRef.current.currentTime);
     }
   };
 
   const onLoadMetadata = () => {
-    console.log("Start");
     if (audioRef.current) {
-      audioRef.current?.play();
+      audioRef.current.play();
       dispatch(setIsPlaying(true));
+      setIsLocalPlaying(true);
       setIsLoadedTrack(true);
     }
   };
-
-  /* 1 */
 
   const onChangeProgress = (e: ChangeEvent<HTMLInputElement>) => {
     if (audioRef.current) {
       const inputTime = Number(e.target.value);
       audioRef.current.currentTime = inputTime;
+      setCurrentTime(inputTime);
     }
   };
 
@@ -85,6 +86,16 @@ export default function Bar() {
     dispatch(toggleShuffle());
   };
 
+  const handleEnded = () => {
+    setIsLocalPlaying(false);
+    dispatch(setIsPlaying(false));
+    
+    // Если не включен повтор, переключаем на следующий трек
+    if (!isLoop) {
+      dispatch(setNextTrack());
+    }
+  };
+
   const handleNotImplemented = () => {
     alert("Еще не реализовано");
   };
@@ -95,14 +106,10 @@ export default function Bar() {
         <audio
           ref={audioRef}
           src={currentTrack.track_file}
-          onEnded={() => {
-            setIsLocalPlaying(false);
-            dispatch(setIsPlaying(false));
-          }}
-          loop={true}
+          onEnded={handleEnded}
+          loop={isLoop} // Используем состояние isLoop для повторения
           onTimeUpdate={onTimeUpdate}
           onLoadedMetadata={onLoadMetadata}
-          onEnded={() => console.log("next track")}
         />
       )}
 
@@ -110,7 +117,7 @@ export default function Bar() {
         max={audioRef.current?.duration || 0}
         step={0.1}
         readOnly={!isLoadedTrack}
-        value={11}
+        value={currentTime}
         onChange={onChangeProgress}
       />
 
@@ -146,7 +153,9 @@ export default function Bar() {
               </div>
 
               <div
-                className={classNames(styles.player__btnRepeat, styles.btnIcon)}
+                className={classNames(styles.player__btnRepeat, styles.btnIcon, {
+                  [styles.player__btnRepeatActive]: isLoop, // Добавляем класс для активного состояния
+                })}
                 onClick={onToggleLoop}
               >
                 <svg className={styles.player__btnRepeatSvg}>
@@ -159,7 +168,7 @@ export default function Bar() {
                   styles.player__btnShuffle,
                   styles.btnIcon,
                   {
-                    [styles.player__btnShuffleActive]: isShuffle, // Добавляем класс для активного состояния
+                    [styles.player__btnShuffleActive]: isShuffle,
                   }
                 )}
                 onClick={onToggleShuffle}
@@ -225,12 +234,13 @@ export default function Bar() {
                   )}
                   type="range"
                   name="range"
+                  value={volume * 100}
                   onChange={(e) => {
-                    setVolume(Number(e.target.value));
+                    const newVolume = Number(e.target.value) / 100;
+                    setVolume(newVolume);
                     if (audioRef.current) {
-                      audioRef.current.volume = Number(e.target.value) / 100;
+                      audioRef.current.volume = newVolume;
                     }
-                    console.log(Number(e.target.value));
                   }}
                 />
               </div>
