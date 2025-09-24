@@ -9,7 +9,7 @@ import { useState } from "react";
 import Track from "../Track/Track";
 import { useAppSelector } from "../store/store";
 
-export default function CenterBlock() {
+export default function  CenterBlock() {
   const [showArtistFilter, setShowArtistFilter] = useState(false);
   const artists = getUniqueValuesByKey(data, "author");
   const currentTrack = useAppSelector((state) => state.tracks.currentTrack);

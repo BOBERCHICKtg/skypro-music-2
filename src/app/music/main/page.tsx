@@ -61,28 +61,6 @@ export default function Home() {
     <div className={styles.wrapper}>
       <div className={"container"}>
         <main className={"main"}>
-          {/* Кнопка выхода */}
-          <button
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            style={{
-              position: 'absolute',
-              top: '20px',
-              right: '20px',
-              padding: '10px 20px',
-              backgroundColor: '#ff4d4f',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: isLoggingOut ? 'not-allowed' : 'pointer',
-              opacity: isLoggingOut ? 0.7 : 1,
-              fontSize: '14px',
-              fontWeight: 'bold',
-              zIndex: 1000
-            }}
-          >
-            {isLoggingOut ? 'Выход...' : 'Выйти'}
-          </button>
 
           <MainNav />
           <CenterBlock />
