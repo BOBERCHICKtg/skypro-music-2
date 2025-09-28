@@ -5,12 +5,14 @@ import styles from './signin.module.css';
 import classNames from 'classnames';
 import Link from 'next/link';
 import { ChangeEvent, useState, FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Signin() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [errorMessage, setErrorMessage] = useState('')
     const [isLoading, setIsLoading] = useState(false)
+    const router = useRouter()
 
     const onChangeEmail = (e: ChangeEvent<HTMLInputElement>) => {
         setEmail(e.target.value)
@@ -44,7 +46,7 @@ export default function Signin() {
             console.log('Успешная авторизация:', userData)
             
             // Перенаправление пользователя после успешного входа
-            window.location.href = '/music/main'
+            router.push('/music/main')
             
         } catch (error: any) {
             console.error('Ошибка авторизации:', error)
