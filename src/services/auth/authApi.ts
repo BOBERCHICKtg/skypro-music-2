@@ -15,7 +15,7 @@ type AuthUserReturn = {
 
 export const authUser = async (data: AuthUserProps): Promise<AuthUserReturn> => {
     try {
-        const response = await axios.post(BASE_URL + 'user/login/', data, {
+        const response = await axios.post(BASE_URL + '/user/login/', data, {
             headers: {
                 "Content-Type": "application/json",
             },
@@ -70,7 +70,7 @@ export const authUser = async (data: AuthUserProps): Promise<AuthUserReturn> => 
 // Дополнительные функции API
 export const registerUser = async (data: AuthUserProps & { username: string }): Promise<AuthUserReturn> => {
     try {
-        const response = await axios.post(BASE_URL + 'user/signup/', data, {
+        const response = await axios.post(BASE_URL + '/user/signup/', data, {
             headers: {
                 "Content-Type": "application/json",
             },
@@ -129,23 +129,12 @@ export const registerUser = async (data: AuthUserProps & { username: string }): 
 // authApi.ts
 export const logoutUser = async (): Promise<void> => {
     try {
-        // Если нужно отправлять запрос на сервер для выхода
-        // await axios.post(BASE_URL + 'user/logout/', {}, {
-        //     headers: {
-        //         "Authorization": `Bearer ${localStorage.getItem('authToken')}`,
-        //         "Content-Type": "application/json",
-        //     },
-        // })
-        
-        // Очищаем localStorage
         localStorage.removeItem('authToken')
         localStorage.removeItem('userData')
-        localStorage.removeItem('userSettings') // если есть другие данные
+        localStorage.removeItem('userSettings') 
         
-        // Очищаем sessionStorage на всякий случай
         sessionStorage.clear()
-        
-        // Очищаем cookies (если используете)
+
         document.cookie.split(";").forEach((cookie) => {
             const eqPos = cookie.indexOf("=")
             const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie
@@ -154,7 +143,6 @@ export const logoutUser = async (): Promise<void> => {
 
     } catch (error: any) {
         console.error('Ошибка при выходе:', error)
-        // Даже если ошибка, все равно очищаем локальные данные
         localStorage.removeItem('authToken')
         localStorage.removeItem('userData')
         throw new Error('Ошибка при выходе из системы')
