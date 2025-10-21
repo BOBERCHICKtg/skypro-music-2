@@ -30,9 +30,18 @@ export default function Track({
   onToggleLike,
 }: trackTypeProp) {
   const dispatch = useAppDispatch();
+  const [localIsLiked, setLocalIsLiked] = useState(isLiked);
+
+  // Синхронизируем локальное состояние с пропсами
+  useEffect(() => {
+    setLocalIsLiked(isLiked);
+  }, [isLiked]);
 
   const handleLikeClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Важно: предотвращаем всплытие события
+    e.stopPropagation();
+    // Немедленно меняем состояние для мгновенного отклика UI
+    setLocalIsLiked(!localIsLiked);
+    
     if (onToggleLike) {
       onToggleLike(track);
     }
@@ -86,9 +95,14 @@ export default function Track({
           <svg 
             className={styles.track__timeSvg} 
             onClick={handleLikeClick}
-            style={{ cursor: 'pointer', fill: isLiked ? '#B672FF' : 'currentColor' }}
+            style={{ 
+              cursor: 'pointer', 
+              fill: localIsLiked ? '#B672FF' : 'transparent',
+              stroke: localIsLiked ? '#B672FF' : '#696969',
+              transition: 'fill 0.2s ease, stroke 0.2s ease'
+            }}
           >
-            <use xlinkHref={`/img/icon/sprite.svg#icon-${isLiked ? 'like' : 'dislike'}`}></use>
+            <use xlinkHref={`/img/icon/sprite.svg#icon-${localIsLiked ? 'like' : 'dislike'}`}></use>
           </svg>
           <span className={styles.track__timeText}>
             {formatTime(track.duration_in_seconds)}
