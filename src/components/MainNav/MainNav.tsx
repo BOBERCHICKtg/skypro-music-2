@@ -34,11 +34,11 @@ export default function MainNav() {
         <ul className={styles.menu__list}>
           <li className={styles.menu__item}>
             <Link href="#" className={styles.menu__link}>
-              Главное
+              Главная
             </Link>
           </li>
           <li className={styles.menu__item}>
-            <Link href="#" className={styles.menu__link}>
+            <Link href={"./Center/MyPlaylist"} className={styles.menu__link}>
               Мой плейлист
             </Link>
           </li>

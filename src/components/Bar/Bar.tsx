@@ -200,14 +200,6 @@ export default function Bar() {
 
               <div className={styles.trackPlay__likeDislike}>
                 <div
-                  className={styles.trackPlay__like}
-                  onClick={handleNotImplemented}
-                >
-                  <svg className={styles.trackPlay__likeSvg}>
-                    <use xlinkHref="/img/icon/sprite.svg#icon-like"></use>
-                  </svg>
-                </div>
-                <div
                   className={styles.trackPlay__dislike}
                   onClick={handleNotImplemented}
                 >

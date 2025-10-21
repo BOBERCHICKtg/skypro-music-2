@@ -1,7 +1,7 @@
 "use client";
 
 import { useAppDispatch } from "../store/store";
-import styles from "../CenterBlock/centerblock.module.css";
+import styles from "@/app/music/Center/CenterBlock/centerblock.module.css";
 import { TrackType } from "../sharedTypes/types";
 import { formatTime } from "../utils/helper";
 import {
@@ -10,12 +10,15 @@ import {
 } from "../store/features/trackSlice";
 import Link from "next/link";
 import classNames from "classnames";
+import { useState, useEffect } from "react";
 
 type trackTypeProp = {
   track: TrackType;
   isCurrent: boolean;
   isPlaying: boolean;
   playlist: TrackType[];
+  isLiked?: boolean;
+  onToggleLike?: (track: TrackType) => void;
 };
 
 export default function Track({
@@ -23,8 +26,17 @@ export default function Track({
   isCurrent,
   isPlaying,
   playlist,
+  isLiked = false,
+  onToggleLike,
 }: trackTypeProp) {
   const dispatch = useAppDispatch();
+
+  const handleLikeClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Важно: предотвращаем всплытие события
+    if (onToggleLike) {
+      onToggleLike(track);
+    }
+  };
 
   const onClickTrack = () => {
     dispatch(setCurrentTrack(track));
@@ -71,8 +83,12 @@ export default function Track({
           </Link>
         </div>
         <div className={styles.track__time}>
-          <svg className={styles.track__timeSvg}>
-            <use xlinkHref="/img/icon/sprite.svg#icon-like"></use>
+          <svg 
+            className={styles.track__timeSvg} 
+            onClick={handleLikeClick}
+            style={{ cursor: 'pointer', fill: isLiked ? '#B672FF' : 'currentColor' }}
+          >
+            <use xlinkHref={`/img/icon/sprite.svg#icon-${isLiked ? 'like' : 'dislike'}`}></use>
           </svg>
           <span className={styles.track__timeText}>
             {formatTime(track.duration_in_seconds)}

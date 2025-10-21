@@ -167,3 +167,10 @@ export const getAuthToken = (): string | null => {
     if (typeof window === 'undefined') return null
     return localStorage.getItem('authToken')
 }
+
+export const getTokens = (data: AuthUserProps) => {
+    return axios.post(BASE_URL + '/user/login/', data, {
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })}

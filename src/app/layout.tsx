@@ -22,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className={`${montserrat.variable}`}>
-        <ReduxProvider> {/* Перенесено внутрь body */}
+        <ReduxProvider>
           {children}
         </ReduxProvider>
       </body>

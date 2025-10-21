@@ -2,32 +2,63 @@
 
 import classnames from "classnames";
 import styles from "./centerblock.module.css";
-import Search from "../Search/Search";
 import { data } from "@/data";
-import { formatTime, getUniqueValuesByKey } from "../utils/helper";
-import { useState } from "react";
-import Track from "../Track/Track";
-import { useAppSelector } from "../store/store";
+import { formatTime, getUniqueValuesByKey } from "../../../../components/utils/helper";
+import { useState, useEffect } from "react";
+import Search from "@/components/Search/Search";
+import Track from "@/components/Track/Track";
+import { useAppSelector } from "@/components/store/store";
+import { TrackType } from "../sharedTypes/types";
 
-export default function  CenterBlock() {
+export default function MyPlaylist() {
   const [showArtistFilter, setShowArtistFilter] = useState(false);
+  const [likedTracks, setLikedTracks] = useState<TrackType[]>([]);
   const artists = getUniqueValuesByKey(data, "author");
   const currentTrack = useAppSelector((state) => state.tracks.currentTrack);
   const isPlaying = useAppSelector((state) => state.tracks.isPlay);
+
+  // Загружаем лайкнутые треки из localStorage при монтировании
+  useEffect(() => {
+    const savedLikedTracks = localStorage.getItem('likedTracks');
+    if (savedLikedTracks) {
+      setLikedTracks(JSON.parse(savedLikedTracks));
+    }
+  }, []);
+
+  // Функция для переключения лайка
+  const toggleLikeTrack = (track: TrackType) => {
+    setLikedTracks(prev => {
+      const isAlreadyLiked = prev.some(t => t._id === track._id);
+      let newLikedTracks;
+      
+      if (isAlreadyLiked) {
+        // Удаляем трек из лайкнутых
+        newLikedTracks = prev.filter(t => t._id !== track._id);
+      } else {
+        // Добавляем трек в лайкнутые
+        newLikedTracks = [...prev, track];
+      }
+      
+      // Сохраняем в localStorage
+      localStorage.setItem('likedTracks', JSON.stringify(newLikedTracks));
+      return newLikedTracks;
+    });
+  };
+
+  // Проверяем, лайкнут ли трек
+  const isTrackLiked = (trackId: string) => {
+    return likedTracks.some(track => track._id === trackId);
+  };
 
   const toggleArtistFilter = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowArtistFilter(!showArtistFilter);
   };
 
-  const closeFilter = () => {
-    setShowArtistFilter(false);
-  };
-
   return (
-    <div className={styles.centerblock} onClick={closeFilter}>
+    <>
       <Search title="" />
-      <h2 className={styles.centerblock__h2}>Треки</h2>
+      <h2 className={styles.centerblock__h2}>Мой плейлист</h2>
       <div className={styles.centerblock__filter}>
         <div className={styles.filter__title}>Искать по:</div>
         <div className={styles.filter__buttonWrapper}>
@@ -74,17 +105,25 @@ export default function  CenterBlock() {
           </div>
         </div>
         <div className={styles.content__playlist}>
-          {data.map((track) => (
-            <Track
-              key={track._id}
-              track={track}
-              isCurrent={currentTrack?._id === track._id}
-              isPlaying={isPlaying && currentTrack?._id === track._id}
-              playlist={data}
-            />
-          ))}
+          {likedTracks.length > 0 ? (
+            likedTracks.map((track) => (
+              <Track
+                key={track._id}
+                track={track}
+                isCurrent={currentTrack?._id === track._id}
+                isPlaying={isPlaying && currentTrack?._id === track._id}
+                playlist={likedTracks}
+                isLiked={isTrackLiked(track._id)}
+                onToggleLike={toggleLikeTrack}
+              />
+            ))
+          ) : (
+            <div className={styles.emptyPlaylist}>
+              В вашем плейлисте пока нет треков
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </>
   );
 }

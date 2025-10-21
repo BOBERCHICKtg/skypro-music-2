@@ -1,22 +1,22 @@
-'use client'
+'use client';
 
 import "./page.css";
 import styles from "./page.module.css";
 import Bar from "@/components/Bar/Bar";
 import MainSidebar from "@/components/MainSidebar/MainSidebar";
-import CenterBlock from "@/components/CenterBlock/CenterBlock";
 import MainNav from "@/components/MainNav/MainNav";
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { getTracks } from "@/services/tracks/tracksApi";
 import { TrackType } from "@/components/sharedTypes/types";
-import { error } from "console";
 import { AxiosError } from "axios";
 import { logoutUser } from "@/services/auth/authApi";
 import { useRouter } from "next/navigation";
+import CenterLayout from "../Center/CenterLayout/CenterLayout";
+import CenterBlock from "../Center/CenterBlock/CenterBlock";
 
 export default function Home() {
   const [tracks, setTracks] = useState<TrackType[]>([])
-  const[error, setError] = useState('')
+  const [error, setError] = useState('')
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const router = useRouter()
 
@@ -26,7 +26,7 @@ export default function Home() {
         setTracks(res)
         alert('Tracks loaded successfully!')
       })
-      .catch((error) => { // Исправлено здесь - добавлены скобки вокруг error
+      .catch((error) => {
         if (error instanceof AxiosError) {
           if (error.response) {
             setError(error.response.data)
@@ -41,7 +41,6 @@ export default function Home() {
       })
   }, [])
 
-  // Функция для выхода
   const handleLogout = async () => {
     setIsLoggingOut(true)
     try {
@@ -61,9 +60,12 @@ export default function Home() {
     <div className={styles.wrapper}>
       <div className={"container"}>
         <main className={"main"}>
-
           <MainNav />
-          <CenterBlock />
+          <CenterLayout>
+            {/* Теперь передаем children в CenterLayout */}
+            <CenterBlock />
+            {/* Можете добавить другие компоненты здесь */}
+          </CenterLayout>
           <MainSidebar />
           <Bar />
         </main>
