@@ -19,6 +19,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
+  debugger
+
   return (
     <html lang="ru">
       <body className={`${montserrat.variable}`}>

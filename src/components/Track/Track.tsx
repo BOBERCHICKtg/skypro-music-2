@@ -37,14 +37,47 @@ export default function Track({
     setLocalIsLiked(isLiked);
   }, [isLiked]);
 
+  // Загружаем начальное состояние из localStorage
+  useEffect(() => {
+    const savedLikedTracks = localStorage.getItem('likedTracks');
+    if (savedLikedTracks) {
+      const likedTracks = JSON.parse(savedLikedTracks);
+      const isTrackLiked = likedTracks.some((t: TrackType) => t._id === track._id);
+      setLocalIsLiked(isTrackLiked);
+    }
+  }, [track._id]);
+
   const handleLikeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Немедленно меняем состояние для мгновенного отклика UI
-    setLocalIsLiked(!localIsLiked);
     
+    // Немедленно меняем состояние для мгновенного отклика UI
+    const newLikedState = !localIsLiked;
+    setLocalIsLiked(newLikedState);
+    
+    // Получаем текущие лайкнутые треки из localStorage
+    const savedLikedTracks = localStorage.getItem('likedTracks');
+    let likedTracks: TrackType[] = savedLikedTracks ? JSON.parse(savedLikedTracks) : [];
+    
+    if (newLikedState) {
+      // Добавляем трек в избранное
+      if (!likedTracks.some(t => t._id === track._id)) {
+        likedTracks.push(track);
+      }
+    } else {
+      // Удаляем трек из избранного
+      likedTracks = likedTracks.filter(t => t._id !== track._id);
+    }
+    
+    // Сохраняем обратно в localStorage
+    localStorage.setItem('likedTracks', JSON.stringify(likedTracks));
+    
+    // Вызываем callback функцию если она передана
     if (onToggleLike) {
       onToggleLike(track);
     }
+
+    // Можно добавить уведомление в консоль для отладки
+    console.log(`${newLikedState ? 'Добавлен' : 'Удален'} трек:`, track.name);
   };
 
   const onClickTrack = () => {

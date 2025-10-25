@@ -12,12 +12,13 @@ import { AxiosError } from "axios";
 import { logoutUser } from "@/services/auth/authApi";
 import { useRouter } from "next/navigation";
 import CenterLayout from "../Center/CenterLayout/CenterLayout";
-import CenterBlock from "../Center/CenterBlock/CenterBlock";
+import FavoriteTracksModal from "../Center/MyPlaylist/FovoriteTracks";
 
 export default function Home() {
   const [tracks, setTracks] = useState<TrackType[]>([])
   const [error, setError] = useState('')
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false) // Добавляем состояние для модалки
   const router = useRouter()
 
   useEffect(() => {
@@ -56,21 +57,34 @@ export default function Home() {
     }
   }
 
+  // Функция для открытия модального окна с избранными треками
+  const handleOpenFavorites = () => {
+    setIsFavoritesOpen(true);
+  };
+
+  // Функция для закрытия модального окна
+  const handleCloseFavorites = () => {
+    setIsFavoritesOpen(false);
+  };
+
   return (
     <div className={styles.wrapper}>
       <div className={"container"}>
         <main className={"main"}>
-          <MainNav />
-          <CenterLayout>
-            {/* Теперь передаем children в CenterLayout */}
-            <CenterBlock />
-            {/* Можете добавить другие компоненты здесь */}
-          </CenterLayout>
+          {/* Передаем функцию открытия модалки в MainNav */}
+          <MainNav onOpenFavorites={handleOpenFavorites} />
+          <CenterLayout/>
           <MainSidebar />
           <Bar />
         </main>
         <footer className="footer"></footer>
       </div>
+
+      {/* Модальное окно с избранными треками */}
+      <FavoriteTracksModal
+        isOpen={isFavoritesOpen}
+        onClose={handleCloseFavorites}
+      />
     </div>
   );
 }
