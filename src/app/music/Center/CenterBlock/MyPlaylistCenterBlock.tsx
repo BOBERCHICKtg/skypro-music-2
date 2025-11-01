@@ -1,19 +1,53 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styles from "./centerblock.module.css";
-import { data } from "@/data";
 import Track from "@/components/Track/Track";
 import classNames from "classnames";
 import Search from "@/components/Search/Search";
 import { getUniqueValuesByKey } from "@/components/utils/helper";
 import { useAppSelector } from "@/components/store/store";
+import { getFavoriteTracks } from "@/services/tracks/tracksApi";
+import { TrackType } from "@/components/sharedTypes/types";
+import { isAuthenticated } from "@/services/auth/authApi";
 
-export default function CenterBlock() {
+export default function MyPlaylistCenterBlock() {
   const [showArtistFilter, setShowArtistFilter] = useState(false);
-  const artists = getUniqueValuesByKey(data, "author");
+  const [favoriteTracks, setFavoriteTracks] = useState<TrackType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const artists = getUniqueValuesByKey(favoriteTracks, "author");
   const currentTrack = useAppSelector((state) => state.tracks.currentTrack);
   const isPlaying = useAppSelector((state) => state.tracks.isPlay);
+
+  useEffect(() => {
+    loadFavoriteTracks();
+  }, []);
+
+  const loadFavoriteTracks = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      if (!isAuthenticated()) {
+        setError('Для просмотра избранных треков необходимо войти в систему');
+        return;
+      }
+
+      const favorites = await getFavoriteTracks();
+      setFavoriteTracks(favorites);
+      
+    } catch (error: any) {
+      if (error.message.includes('Токен не найден')) {
+        setError('Сессия истекла. Пожалуйста, войдите снова.');
+      } else {
+        setError('Ошибка при загрузке избранных треков');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const toggleArtistFilter = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -27,7 +61,7 @@ export default function CenterBlock() {
   return (
     <div className={styles.centerblock} onClick={closeFilter}>
       <Search title="" />
-      <h2 className={styles.centerblock__h2}>Треки</h2>
+      <h2 className={styles.centerblock__h2}>Мой плейлист</h2>
       <div className={styles.centerblock__filter}>
         <div className={styles.filter__title}>Искать по:</div>
         <div className={styles.filter__buttonWrapper}>
@@ -74,15 +108,25 @@ export default function CenterBlock() {
           </div>
         </div>
         <div className={styles.content__playlist}>
-          {data.map((track) => (
-            <Track
-              key={track._id}
-              track={track}
-              isCurrent={currentTrack?._id === track._id}
-              isPlaying={isPlaying && currentTrack?._id === track._id}
-              playlist={data}
-            />
-          ))}
+          {isLoading ? (
+            <div className={styles.emptyPlaylist}>Загрузка...</div>
+          ) : error ? (
+            <div className={styles.emptyPlaylist}>{error}</div>
+          ) : favoriteTracks.length > 0 ? (
+            favoriteTracks.map((track) => (
+              <Track
+                key={track._id}
+                track={track}
+                isCurrent={currentTrack?._id === track._id}
+                isPlaying={isPlaying && currentTrack?._id === track._id}
+                playlist={favoriteTracks}
+              />
+            ))
+          ) : (
+            <div className={styles.emptyPlaylist}>
+              В избранном пока нет треков
+            </div>
+          )}
         </div>
       </div>
     </div>

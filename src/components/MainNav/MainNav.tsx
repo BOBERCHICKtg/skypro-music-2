@@ -5,23 +5,11 @@ import Link from "next/link";
 import styles from "./mainnav.module.css";
 import { useState } from "react";
 
-type MainNavProps = {
-  onOpenFavorites?: () => void;
-};
-
-export default function MainNav({ onOpenFavorites }: MainNavProps) {
+export default function MainNav() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
-  };
-
-  const handleMyPlaylistClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onOpenFavorites) {
-      onOpenFavorites(); // Вызываем функцию открытия модалки
-    }
-    setIsMenuOpen(false); // Закрываем меню на мобильных
   };
 
   return (
@@ -50,10 +38,9 @@ export default function MainNav({ onOpenFavorites }: MainNavProps) {
             </Link>
           </li>
           <li className={styles.menu__item}>
-            {/* Заменяем Link на button или a с обработчиком */}
-            <a href="#" className={styles.menu__link} onClick={handleMyPlaylistClick}>
+            <Link href={"Center/MyPlaylist"} className={styles.menu__link}>
               Мой плейлист
-            </a>
+            </Link>
           </li>
           <li className={styles.menu__item}>
             <Link href={'./../auth/signin'} className={styles.menu__link}>
