@@ -15,28 +15,17 @@ type AuthUserReturn = {
 
 export const authUser = async (data: AuthUserProps): Promise<AuthUserReturn> => {
     try {
-        const tokenResponse = await axios.post(BASE_URL + '/user/token/', data, {
+        const response = await axios.post(BASE_URL + '/user/login/', data, {
             headers: {
                 "Content-Type": "application/json",
             },
         })
 
-        if (tokenResponse.data.access) {
-            localStorage.setItem('authToken', tokenResponse.data.access);
-            localStorage.setItem('refreshToken', tokenResponse.data.refresh);
+        if (response.data) {
+            localStorage.setItem('userData', JSON.stringify(response.data));
         }
 
-        const userResponse = await axios.post(BASE_URL + '/user/login/', data, {
-            headers: {
-                "Content-Type": "application/json",
-            },
-        })
-
-        if (userResponse.data) {
-            localStorage.setItem('userData', JSON.stringify(userResponse.data));
-        }
-
-        return userResponse.data;
+        return response.data;
 
     } catch (error: any) {
         let errorMessage = "Произошла неизвестная ошибка"
@@ -74,9 +63,56 @@ export const authUser = async (data: AuthUserProps): Promise<AuthUserReturn> => 
     }
 }
 
+export const getTokens = async (data: AuthUserProps) => {
+    try {
+        const response = await axios.post(BASE_URL + '/user/token/', data, {
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })
+
+        if (response.data.access) {
+            localStorage.setItem('authToken', response.data.access);
+            localStorage.setItem('refreshToken', response.data.refresh);
+            return response.data;
+        }
+
+        throw new Error('Токен не получен');
+
+    } catch (error: any) {
+        let errorMessage = "Ошибка при получении токенов"
+
+        if (axios.isAxiosError(error)) {
+            if (error.response) {
+                const status = error.response.status
+                
+                switch (status) {
+                    case 400:
+                        errorMessage = "Неверные данные для входа"
+                        break
+                    case 401:
+                        errorMessage = "Неверный email или пароль"
+                        break
+                    default:
+                        errorMessage = error.response.data?.message || `Ошибка: ${status}`
+                }
+            } else if (error.request) {
+                errorMessage = "Нет ответа от сервера"
+            } else {
+                errorMessage = "Ошибка при отправке запроса"
+            }
+        } else {
+            errorMessage = error.message || "Неизвестная ошибка"
+        }
+
+        throw new Error(errorMessage)
+    }
+}
+
 export const isAuthenticated = (): boolean => {
     if (typeof window === 'undefined') return false
-    return !!localStorage.getItem('authToken');
+    const token = localStorage.getItem('authToken');
+    return !!token;
 }
 
 export const getUserData = (): AuthUserReturn | null => {

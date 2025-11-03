@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styles from "./centerblock.module.css";
 import { data } from "@/data";
 import Track from "@/components/Track/Track";
@@ -8,12 +8,47 @@ import classNames from "classnames";
 import Search from "@/components/Search/Search";
 import { getUniqueValuesByKey } from "@/components/utils/helper";
 import { useAppSelector } from "@/components/store/store";
+import { getFavoriteTracks } from "@/services/tracks/tracksApi";
+import { TrackType } from "@/components/sharedTypes/types";
+import { isAuthenticated } from "@/services/auth/authApi";
 
 export default function CenterBlock() {
   const [showArtistFilter, setShowArtistFilter] = useState(false);
+  const [likedTrackIds, setLikedTrackIds] = useState<Set<string>>(new Set());
+  
   const artists = getUniqueValuesByKey(data, "author");
   const currentTrack = useAppSelector((state) => state.tracks.currentTrack);
   const isPlaying = useAppSelector((state) => state.tracks.isPlay);
+
+  useEffect(() => {
+    loadFavoriteTracks();
+  }, []);
+
+  const loadFavoriteTracks = async () => {
+    try {
+      if (!isAuthenticated()) return;
+      
+      const favorites = await getFavoriteTracks();
+      const likedIds = new Set(favorites.map(track => track._id));
+      setLikedTrackIds(likedIds);
+      
+    } catch (error) {
+    }
+  };
+
+  const handleToggleLike = (track: TrackType, isLiked: boolean) => {
+    if (isLiked) {
+      setLikedTrackIds(prev => new Set([...prev, track._id]));
+    } else {
+      setLikedTrackIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(track._id);
+        return newSet;
+      });
+    }
+    
+    loadFavoriteTracks();
+  };
 
   const toggleArtistFilter = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -81,6 +116,8 @@ export default function CenterBlock() {
               isCurrent={currentTrack?._id === track._id}
               isPlaying={isPlaying && currentTrack?._id === track._id}
               playlist={data}
+              isLiked={likedTrackIds.has(track._id)}
+              onToggleLike={handleToggleLike}
             />
           ))}
         </div>

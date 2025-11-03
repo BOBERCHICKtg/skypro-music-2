@@ -1,6 +1,6 @@
 'use client'
 
-import { authUser } from '@/services/auth/authApi';
+import { authUser, getTokens } from '@/services/auth/authApi';
 import styles from './signin.module.css';
 import classNames from 'classnames';
 import Link from 'next/link';
@@ -16,24 +16,22 @@ export default function Signin() {
 
     const onChangeEmail = (e: ChangeEvent<HTMLInputElement>) => {
         setEmail(e.target.value)
-        setErrorMessage('') // Сбрасываем ошибку при изменении поля
+        setErrorMessage('')
     }
 
     const onChangePassword = (e: ChangeEvent<HTMLInputElement>) => {
         setPassword(e.target.value)
-        setErrorMessage('') // Сбрасываем ошибку при изменении поля
+        setErrorMessage('')
     }
 
     const onSubmit = async (e: FormEvent) => {
         e.preventDefault()
         setErrorMessage('')
 
-        // Проверка заполнения полей
         if (!email.trim() || !password.trim()) {
             return setErrorMessage('Заполните все поля')
         }
 
-        // Проверка валидности email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
         if (!emailRegex.test(email)) {
             return setErrorMessage('Введите корректный email')
@@ -42,17 +40,20 @@ export default function Signin() {
         setIsLoading(true)
 
         try {
+            // ВАЖНО: сначала получаем токены, потом данные пользователя
+            await getTokens({ email, password })
             const userData = await authUser({ email, password })
             console.log('Успешная авторизация:', userData)
             
-            // Перенаправление пользователя после успешного входа
+            // Проверяем что токен сохранился
+            console.log('Токен после входа:', localStorage.getItem('authToken'))
+            
             router.push('/music/main')
             
         } catch (error: any) {
             console.error('Ошибка авторизации:', error)
             
             if (error.response) {
-                // Ошибка от сервера с статусом
                 const status = error.response.status
                 
                 switch (status) {
@@ -72,10 +73,8 @@ export default function Signin() {
                         setErrorMessage(error.response.data?.message || `Ошибка: ${status}`)
                 }
             } else if (error.request) {
-                // Запрос был отправлен, но ответ не получен
                 setErrorMessage('Нет ответа от сервера. Проверьте подключение к интернету')
             } else {
-                // Ошибка при настройке запроса
                 setErrorMessage('Ошибка при отправке запроса')
             }
         } finally {

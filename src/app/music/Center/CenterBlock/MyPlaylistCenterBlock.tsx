@@ -17,7 +17,8 @@ export default function MyPlaylistCenterBlock() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const artists = getUniqueValuesByKey(favoriteTracks, "author");
+  // Используем пустой массив если favoriteTracks не массив
+  const artists = getUniqueValuesByKey(Array.isArray(favoriteTracks) ? favoriteTracks : [], "author");
   const currentTrack = useAppSelector((state) => state.tracks.currentTrack);
   const isPlaying = useAppSelector((state) => state.tracks.isPlay);
 
@@ -36,16 +37,32 @@ export default function MyPlaylistCenterBlock() {
       }
 
       const favorites = await getFavoriteTracks();
-      setFavoriteTracks(favorites);
+      console.log('Загруженные избранные треки:', favorites);
+      
+      // Убедимся что это массив
+      if (Array.isArray(favorites)) {
+        setFavoriteTracks(favorites);
+      } else {
+        console.error('getFavoriteTracks вернул не массив:', favorites);
+        setFavoriteTracks([]);
+      }
       
     } catch (error: any) {
+      console.error('Ошибка при загрузке избранных треков:', error);
       if (error.message.includes('Токен не найден')) {
         setError('Сессия истекла. Пожалуйста, войдите снова.');
       } else {
         setError('Ошибка при загрузке избранных треков');
       }
+      setFavoriteTracks([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleToggleLike = (track: TrackType, isLiked: boolean) => {
+    if (!isLiked) {
+      setFavoriteTracks(prev => prev.filter(t => t._id !== track._id));
     }
   };
 
@@ -112,7 +129,7 @@ export default function MyPlaylistCenterBlock() {
             <div className={styles.emptyPlaylist}>Загрузка...</div>
           ) : error ? (
             <div className={styles.emptyPlaylist}>{error}</div>
-          ) : favoriteTracks.length > 0 ? (
+          ) : Array.isArray(favoriteTracks) && favoriteTracks.length > 0 ? (
             favoriteTracks.map((track) => (
               <Track
                 key={track._id}
@@ -120,6 +137,8 @@ export default function MyPlaylistCenterBlock() {
                 isCurrent={currentTrack?._id === track._id}
                 isPlaying={isPlaying && currentTrack?._id === track._id}
                 playlist={favoriteTracks}
+                isLiked={true}
+                onToggleLike={handleToggleLike}
               />
             ))
           ) : (

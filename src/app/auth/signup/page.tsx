@@ -1,6 +1,6 @@
 'use client'
 
-import { registerUser } from '@/services/auth/authApi';
+import { registerUser, getTokens } from '@/services/auth/authApi';
 import styles from './signup.module.css';
 import classNames from 'classnames';
 import Link from 'next/link';
@@ -38,7 +38,6 @@ export default function SignUp() {
         e.preventDefault()
         setErrorMessage('')
 
-        // Валидация
         if (!email.trim() || !username.trim() || !password.trim() || !confirmPassword.trim()) {
             return setErrorMessage('Заполните все поля')
         }
@@ -62,7 +61,10 @@ export default function SignUp() {
             const userData = await registerUser({ email, password, username })
             console.log('Успешная регистрация:', userData)
             
-            // Перенаправление после успешной регистрации
+            // После регистрации автоматически входим и получаем токены
+            await getTokens({ email, password })
+            console.log('Токены получены после регистрации')
+            
             window.location.href = '/music/main'
             
         } catch (error: any) {

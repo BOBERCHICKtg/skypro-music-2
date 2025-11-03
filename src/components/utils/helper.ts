@@ -1,21 +1,31 @@
 import { TrackType } from "@/sharedTypes/sharedTypes";
 
 export function getUniqueValuesByKey(
-  arr: TrackType[],
+  arr: any[],
   key: keyof TrackType
 ): string[] {
-  const uniqueValues = new Set<string>();
-  arr.forEach((item) => {
-    const value = item[key];
+  // Защита от не-массива
+  if (!Array.isArray(arr)) {
+    console.warn('getUniqueValuesByKey: передан не массив', arr);
+    return [];
+  }
 
-    if (Array.isArray(value)) {
-      value.forEach((v) => {
-        if (v) {
-          uniqueValues.add(v);
-        }
-      });
-    } else if (typeof value === "string") {
-      uniqueValues.add(value);
+  const uniqueValues = new Set<string>();
+  
+  arr.forEach((item) => {
+    // Проверяем что item - объект и содержит нужный ключ
+    if (item && typeof item === 'object' && key in item) {
+      const value = item[key];
+
+      if (Array.isArray(value)) {
+        value.forEach((v) => {
+          if (v && typeof v === 'string') {
+            uniqueValues.add(v);
+          }
+        });
+      } else if (typeof value === "string" && value) {
+        uniqueValues.add(value);
+      }
     }
   });
 
@@ -25,7 +35,7 @@ export function getUniqueValuesByKey(
 export function formatTime(time: number) {
   const minutes = Math.floor(time / 60);
   const inputSeconds = Math.floor(time % 60);
-  const outputSeconds = inputSeconds < 10 ? `${inputSeconds}` : inputSeconds;
+  const outputSeconds = inputSeconds < 10 ? `0${inputSeconds}` : inputSeconds;
 
   return `${minutes}:${outputSeconds}`;
 }

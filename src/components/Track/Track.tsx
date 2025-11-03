@@ -10,7 +10,7 @@ import {
 } from "../store/features/trackSlice";
 import Link from "next/link";
 import classNames from "classnames";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { addToFavorites, removeFromFavorites } from "@/services/tracks/tracksApi";
 import { isAuthenticated } from "@/services/auth/authApi";
 
@@ -19,6 +19,8 @@ type trackTypeProp = {
   isCurrent: boolean;
   isPlaying: boolean;
   playlist: TrackType[];
+  isLiked?: boolean;
+  onToggleLike?: (track: TrackType, isLiked: boolean) => void;
 };
 
 export default function Track({
@@ -26,29 +28,45 @@ export default function Track({
   isCurrent,
   isPlaying,
   playlist,
+  isLiked = false,
+  onToggleLike,
 }: trackTypeProp) {
   const dispatch = useAppDispatch();
-  const [isLiked, setIsLiked] = useState(false);
+  const [localIsLiked, setLocalIsLiked] = useState(isLiked);
+
+  useEffect(() => {
+    setLocalIsLiked(isLiked);
+  }, [isLiked]);
 
   const handleLikeClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     
-    if (!isAuthenticated()) {
+    const authenticated = isAuthenticated();
+    console.log('Авторизован:', authenticated);
+    console.log('Токен в localStorage:', localStorage.getItem('authToken'));
+    
+    if (!authenticated) {
       alert('Для добавления в избранное необходимо войти в систему');
       return;
     }
     
     try {
-      if (isLiked) {
-        await removeFromFavorites(track._id);
-      } else {
+      const newLikeState = !localIsLiked;
+      setLocalIsLiked(newLikeState);
+
+      if (newLikeState) {
         await addToFavorites(track._id);
+      } else {
+        await removeFromFavorites(track._id);
       }
       
-      setIsLiked(!isLiked);
+      if (onToggleLike) {
+        onToggleLike(track, newLikeState);
+      }
       
     } catch (error) {
-      // Без обработки ошибок
+      setLocalIsLiked(!localIsLiked);
+      console.error('Ошибка при изменении избранного:', error);
     }
   };
 
@@ -102,11 +120,11 @@ export default function Track({
             onClick={handleLikeClick}
             style={{ 
               cursor: 'pointer', 
-              fill: isLiked ? '#B672FF' : 'transparent',
-              stroke: isLiked ? '#B672FF' : '#696969'
+              fill: localIsLiked ? '#B672FF' : 'transparent',
+              stroke: localIsLiked ? '#B672FF' : '#696969'
             }}
           >
-            <use xlinkHref={`/img/icon/sprite.svg#icon-${isLiked ? 'like' : 'dislike'}`}></use>
+            <use xlinkHref={`/img/icon/sprite.svg#icon-${localIsLiked ? 'like' : 'dislike'}`}></use>
           </svg>
           <span className={styles.track__timeText}>
             {formatTime(track.duration_in_seconds)}
