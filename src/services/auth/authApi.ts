@@ -109,6 +109,35 @@ export const getTokens = async (data: AuthUserProps) => {
     }
 }
 
+export const refreshAuthToken = async (): Promise<string> => {
+    try {
+        const refreshToken = localStorage.getItem('refreshToken');
+        
+        if (!refreshToken) {
+            throw new Error('Refresh token не найден');
+        }
+
+        const response = await axios.post(BASE_URL + '/user/token/refresh/', {
+            refresh: refreshToken
+        }, {
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (response.data.access) {
+            localStorage.setItem('authToken', response.data.access);
+            return response.data.access;
+        }
+
+        throw new Error('Токен не получен');
+
+    } catch (error: any) {
+        logoutUser();
+        throw new Error('Не удалось обновить токен. Пожалуйста, войдите снова.');
+    }
+}
+
 export const isAuthenticated = (): boolean => {
     if (typeof window === 'undefined') return false
     const token = localStorage.getItem('authToken');

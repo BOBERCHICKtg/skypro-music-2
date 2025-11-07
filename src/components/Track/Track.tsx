@@ -1,6 +1,6 @@
 "use client";
 
-import { useAppDispatch } from "../store/store";
+import { useAppDispatch, useAppSelector } from "../store/store";
 import styles from "@/app/music/Center/CenterBlock/centerblock.module.css";
 import { TrackType } from "../sharedTypes/types";
 import { formatTime } from "../utils/helper";
@@ -13,6 +13,8 @@ import classNames from "classnames";
 import { useState, useEffect } from "react";
 import { addToFavorites, removeFromFavorites } from "@/services/tracks/tracksApi";
 import { isAuthenticated } from "@/services/auth/authApi";
+import { addToFavorites as addToFavoritesRedux, removeFromFavorites as removeFromFavoritesRedux } from "../store/features/favoritesSlice";
+import { useRouter } from "next/navigation";
 
 type trackTypeProp = {
   track: TrackType;
@@ -20,7 +22,6 @@ type trackTypeProp = {
   isPlaying: boolean;
   playlist: TrackType[];
   isLiked?: boolean;
-  onToggleLike?: (track: TrackType, isLiked: boolean) => void;
 };
 
 export default function Track({
@@ -29,26 +30,31 @@ export default function Track({
   isPlaying,
   playlist,
   isLiked = false,
-  onToggleLike,
 }: trackTypeProp) {
   const dispatch = useAppDispatch();
+  const router = useRouter();
+  const likedTrackIds = useAppSelector((state) => state.favorites.likedTrackIds);
   const [localIsLiked, setLocalIsLiked] = useState(isLiked);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    setLocalIsLiked(isLiked);
-  }, [isLiked]);
+    // Используем includes вместо has
+    setLocalIsLiked(isLiked || likedTrackIds.includes(track._id));
+  }, [isLiked, likedTrackIds, track._id]);
 
   const handleLikeClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     
-    const authenticated = isAuthenticated();
-    console.log('Авторизован:', authenticated);
-    console.log('Токен в localStorage:', localStorage.getItem('authToken'));
-    
-    if (!authenticated) {
+    if (!isAuthenticated()) {
       alert('Для добавления в избранное необходимо войти в систему');
+      router.push('/auth/signin');
       return;
     }
+    
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    const originalLikeState = localIsLiked;
     
     try {
       const newLikeState = !localIsLiked;
@@ -56,17 +62,19 @@ export default function Track({
 
       if (newLikeState) {
         await addToFavorites(track._id);
+        dispatch(addToFavoritesRedux(track));
       } else {
         await removeFromFavorites(track._id);
+        dispatch(removeFromFavoritesRedux(track._id));
       }
       
-      if (onToggleLike) {
-        onToggleLike(track, newLikeState);
-      }
-      
-    } catch (error) {
-      setLocalIsLiked(!localIsLiked);
+    } catch (error: any) {
+      // Откатываем состояние лайка при ошибке
+      setLocalIsLiked(originalLikeState);
+      alert('Ошибка при изменении избранного: ' + error.message);
       console.error('Ошибка при изменении избранного:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -119,9 +127,10 @@ export default function Track({
             className={styles.track__timeSvg} 
             onClick={handleLikeClick}
             style={{ 
-              cursor: 'pointer', 
+              cursor: isLoading ? 'not-allowed' : 'pointer', 
               fill: localIsLiked ? '#B672FF' : 'transparent',
-              stroke: localIsLiked ? '#B672FF' : '#696969'
+              stroke: localIsLiked ? '#B672FF' : '#696969',
+              opacity: isLoading ? 0.5 : 1
             }}
           >
             <use xlinkHref={`/img/icon/sprite.svg#icon-${localIsLiked ? 'like' : 'dislike'}`}></use>

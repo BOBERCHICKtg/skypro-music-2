@@ -7,14 +7,16 @@ import Track from "@/components/Track/Track";
 import classNames from "classnames";
 import Search from "@/components/Search/Search";
 import { getUniqueValuesByKey } from "@/components/utils/helper";
-import { useAppSelector } from "@/components/store/store";
+import { useAppSelector, useAppDispatch } from "@/components/store/store";
 import { getFavoriteTracks } from "@/services/tracks/tracksApi";
 import { TrackType } from "@/components/sharedTypes/types";
 import { isAuthenticated } from "@/services/auth/authApi";
+import { setFavoriteTracks } from "@/components/store/features/favoritesSlice";
 
 export default function CenterBlock() {
+  const dispatch = useAppDispatch();
   const [showArtistFilter, setShowArtistFilter] = useState(false);
-  const [likedTrackIds, setLikedTrackIds] = useState<Set<string>>(new Set());
+  const likedTrackIds = useAppSelector((state) => state.favorites.likedTrackIds);
   
   const artists = getUniqueValuesByKey(data, "author");
   const currentTrack = useAppSelector((state) => state.tracks.currentTrack);
@@ -29,25 +31,15 @@ export default function CenterBlock() {
       if (!isAuthenticated()) return;
       
       const favorites = await getFavoriteTracks();
-      const likedIds = new Set(favorites.map(track => track._id));
-      setLikedTrackIds(likedIds);
+      dispatch(setFavoriteTracks(favorites));
       
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message.includes('Токен не найден')) {
+        console.log('Пользователь не авторизован');
+      } else {
+        console.error('Ошибка загрузки избранных треков:', error);
+      }
     }
-  };
-
-  const handleToggleLike = (track: TrackType, isLiked: boolean) => {
-    if (isLiked) {
-      setLikedTrackIds(prev => new Set([...prev, track._id]));
-    } else {
-      setLikedTrackIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(track._id);
-        return newSet;
-      });
-    }
-    
-    loadFavoriteTracks();
   };
 
   const toggleArtistFilter = (e: React.MouseEvent) => {
@@ -116,8 +108,8 @@ export default function CenterBlock() {
               isCurrent={currentTrack?._id === track._id}
               isPlaying={isPlaying && currentTrack?._id === track._id}
               playlist={data}
-              isLiked={likedTrackIds.has(track._id)}
-              onToggleLike={handleToggleLike}
+              // Используем includes вместо has
+              isLiked={likedTrackIds.includes(track._id)}
             />
           ))}
         </div>

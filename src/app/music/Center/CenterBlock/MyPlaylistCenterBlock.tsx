@@ -6,19 +6,22 @@ import Track from "@/components/Track/Track";
 import classNames from "classnames";
 import Search from "@/components/Search/Search";
 import { getUniqueValuesByKey } from "@/components/utils/helper";
-import { useAppSelector } from "@/components/store/store";
+import { useAppSelector, useAppDispatch } from "@/components/store/store";
 import { getFavoriteTracks } from "@/services/tracks/tracksApi";
 import { TrackType } from "@/components/sharedTypes/types";
 import { isAuthenticated } from "@/services/auth/authApi";
+import { setFavoriteTracks } from "@/components/store/features/favoritesSlice";
+import { useRouter } from "next/navigation";
 
 export default function MyPlaylistCenterBlock() {
+  const dispatch = useAppDispatch();
+  const router = useRouter();
   const [showArtistFilter, setShowArtistFilter] = useState(false);
-  const [favoriteTracks, setFavoriteTracks] = useState<TrackType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Используем пустой массив если favoriteTracks не массив
-  const artists = getUniqueValuesByKey(Array.isArray(favoriteTracks) ? favoriteTracks : [], "author");
+  const favoriteTracks = useAppSelector((state) => state.favorites.favoriteTracks);
+  const artists = getUniqueValuesByKey(favoriteTracks, "author");
   const currentTrack = useAppSelector((state) => state.tracks.currentTrack);
   const isPlaying = useAppSelector((state) => state.tracks.isPlay);
 
@@ -37,32 +40,12 @@ export default function MyPlaylistCenterBlock() {
       }
 
       const favorites = await getFavoriteTracks();
-      console.log('Загруженные избранные треки:', favorites);
-      
-      // Убедимся что это массив
-      if (Array.isArray(favorites)) {
-        setFavoriteTracks(favorites);
-      } else {
-        console.error('getFavoriteTracks вернул не массив:', favorites);
-        setFavoriteTracks([]);
-      }
+      dispatch(setFavoriteTracks(favorites));
       
     } catch (error: any) {
-      console.error('Ошибка при загрузке избранных треков:', error);
-      if (error.message.includes('Токен не найден')) {
-        setError('Сессия истекла. Пожалуйста, войдите снова.');
-      } else {
-        setError('Ошибка при загрузке избранных треков');
-      }
-      setFavoriteTracks([]);
+      setError('Ошибка при загрузке избранных треков: ' + error.message);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleToggleLike = (track: TrackType, isLiked: boolean) => {
-    if (!isLiked) {
-      setFavoriteTracks(prev => prev.filter(t => t._id !== track._id));
     }
   };
 
@@ -129,7 +112,7 @@ export default function MyPlaylistCenterBlock() {
             <div className={styles.emptyPlaylist}>Загрузка...</div>
           ) : error ? (
             <div className={styles.emptyPlaylist}>{error}</div>
-          ) : Array.isArray(favoriteTracks) && favoriteTracks.length > 0 ? (
+          ) : favoriteTracks.length > 0 ? (
             favoriteTracks.map((track) => (
               <Track
                 key={track._id}
@@ -138,7 +121,6 @@ export default function MyPlaylistCenterBlock() {
                 isPlaying={isPlaying && currentTrack?._id === track._id}
                 playlist={favoriteTracks}
                 isLiked={true}
-                onToggleLike={handleToggleLike}
               />
             ))
           ) : (
