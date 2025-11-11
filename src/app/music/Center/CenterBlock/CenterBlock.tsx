@@ -108,7 +108,6 @@ export default function CenterBlock() {
               isCurrent={currentTrack?._id === track._id}
               isPlaying={isPlaying && currentTrack?._id === track._id}
               playlist={data}
-              // Используем includes вместо has
               isLiked={likedTrackIds.includes(track._id)}
             />
           ))}

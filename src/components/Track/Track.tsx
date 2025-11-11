@@ -7,6 +7,7 @@ import { formatTime } from "../utils/helper";
 import {
   setCurrentPlaylist,
   setCurrentTrack,
+  setIsPlaying,
 } from "../store/features/trackSlice";
 import Link from "next/link";
 import classNames from "classnames";
@@ -38,11 +39,10 @@ export default function Track({
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Используем includes вместо has
     setLocalIsLiked(isLiked || likedTrackIds.includes(track._id));
   }, [isLiked, likedTrackIds, track._id]);
 
-  const handleLikeClick = async (e: React.MouseEvent) => {
+  const handleLikeClick = async (e: React.MouseEvent): Promise<void> => {
     e.stopPropagation();
     
     if (!isAuthenticated()) {
@@ -68,19 +68,32 @@ export default function Track({
         dispatch(removeFromFavoritesRedux(track._id));
       }
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Откатываем состояние лайка при ошибке
       setLocalIsLiked(originalLikeState);
-      alert('Ошибка при изменении избранного: ' + error.message);
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      alert('Ошибка при изменении избранного: ' + errorMessage);
       console.error('Ошибка при изменении избранного:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const onClickTrack = () => {
-    dispatch(setCurrentTrack(track));
-    dispatch(setCurrentPlaylist(playlist));
+  const onClickTrack = (): void => {
+    // Если это текущий трек и он играет, то ставим на паузу
+    if (isCurrent && isPlaying) {
+      dispatch(setIsPlaying(false));
+    } 
+    // Если это текущий трек и он на паузе, то возобновляем воспроизведение
+    else if (isCurrent && !isPlaying) {
+      dispatch(setIsPlaying(true));
+    }
+    // Если это другой трек, то устанавливаем его как текущий и запускаем
+    else {
+      dispatch(setCurrentTrack(track));
+      dispatch(setCurrentPlaylist(playlist));
+      dispatch(setIsPlaying(true));
+    }
   };
 
   return (
