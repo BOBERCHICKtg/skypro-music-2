@@ -1,4 +1,4 @@
-"use client"; // Добавляем, так как используются клиентские хуки
+"use client";
 
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import {
@@ -8,11 +8,13 @@ import {
   TypedUseSelectorHook,
 } from "react-redux";
 import { trackSliceReducer } from "./features/trackSlice";
+import favoritesReducer from "./features/favoritesSlice"; // добавляем импорт
 
 export const makeStore = () => {
   return configureStore({
     reducer: combineReducers({
       tracks: trackSliceReducer,
+      favorites: favoritesReducer, // добавляем в редьюсеры
     }),
   });
 };

@@ -1,21 +1,28 @@
 "use client";
 
-import { useAppDispatch } from "../store/store";
-import styles from "../CenterBlock/centerblock.module.css";
+import { useAppDispatch, useAppSelector } from "../store/store";
+import styles from "@/app/music/Center/CenterBlock/centerblock.module.css";
 import { TrackType } from "../sharedTypes/types";
 import { formatTime } from "../utils/helper";
 import {
   setCurrentPlaylist,
   setCurrentTrack,
+  setIsPlaying,
 } from "../store/features/trackSlice";
 import Link from "next/link";
 import classNames from "classnames";
+import { useState, useEffect } from "react";
+import { addToFavorites, removeFromFavorites } from "@/services/tracks/tracksApi";
+import { isAuthenticated } from "@/services/auth/authApi";
+import { addToFavorites as addToFavoritesRedux, removeFromFavorites as removeFromFavoritesRedux } from "../store/features/favoritesSlice";
+import { useRouter } from "next/navigation";
 
 type trackTypeProp = {
   track: TrackType;
   isCurrent: boolean;
   isPlaying: boolean;
   playlist: TrackType[];
+  isLiked?: boolean;
 };
 
 export default function Track({
@@ -23,12 +30,70 @@ export default function Track({
   isCurrent,
   isPlaying,
   playlist,
+  isLiked = false,
 }: trackTypeProp) {
   const dispatch = useAppDispatch();
+  const router = useRouter();
+  const likedTrackIds = useAppSelector((state) => state.favorites.likedTrackIds);
+  const [localIsLiked, setLocalIsLiked] = useState(isLiked);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const onClickTrack = () => {
-    dispatch(setCurrentTrack(track));
-    dispatch(setCurrentPlaylist(playlist));
+  useEffect(() => {
+    setLocalIsLiked(isLiked || likedTrackIds.includes(track._id));
+  }, [isLiked, likedTrackIds, track._id]);
+
+  const handleLikeClick = async (e: React.MouseEvent): Promise<void> => {
+    e.stopPropagation();
+    
+    if (!isAuthenticated()) {
+      alert('Для добавления в избранное необходимо войти в систему');
+      router.push('/auth/signin');
+      return;
+    }
+    
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    const originalLikeState = localIsLiked;
+    
+    try {
+      const newLikeState = !localIsLiked;
+      setLocalIsLiked(newLikeState);
+
+      if (newLikeState) {
+        await addToFavorites(track._id);
+        dispatch(addToFavoritesRedux(track));
+      } else {
+        await removeFromFavorites(track._id);
+        dispatch(removeFromFavoritesRedux(track._id));
+      }
+      
+    } catch (error: unknown) {
+      // Откатываем состояние лайка при ошибке
+      setLocalIsLiked(originalLikeState);
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      alert('Ошибка при изменении избранного: ' + errorMessage);
+      console.error('Ошибка при изменении избранного:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onClickTrack = (): void => {
+    // Если это текущий трек и он играет, то ставим на паузу
+    if (isCurrent && isPlaying) {
+      dispatch(setIsPlaying(false));
+    } 
+    // Если это текущий трек и он на паузе, то возобновляем воспроизведение
+    else if (isCurrent && !isPlaying) {
+      dispatch(setIsPlaying(true));
+    }
+    // Если это другой трек, то устанавливаем его как текущий и запускаем
+    else {
+      dispatch(setCurrentTrack(track));
+      dispatch(setCurrentPlaylist(playlist));
+      dispatch(setIsPlaying(true));
+    }
   };
 
   return (
@@ -71,8 +136,17 @@ export default function Track({
           </Link>
         </div>
         <div className={styles.track__time}>
-          <svg className={styles.track__timeSvg}>
-            <use xlinkHref="/img/icon/sprite.svg#icon-like"></use>
+          <svg 
+            className={styles.track__timeSvg} 
+            onClick={handleLikeClick}
+            style={{ 
+              cursor: isLoading ? 'not-allowed' : 'pointer', 
+              fill: localIsLiked ? '#B672FF' : 'transparent',
+              stroke: localIsLiked ? '#B672FF' : '#696969',
+              opacity: isLoading ? 0.5 : 1
+            }}
+          >
+            <use xlinkHref={`/img/icon/sprite.svg#icon-${localIsLiked ? 'like' : 'dislike'}`}></use>
           </svg>
           <span className={styles.track__timeText}>
             {formatTime(track.duration_in_seconds)}

@@ -1,22 +1,31 @@
-import "./page.css";
-import styles from "./page.module.css";
-import Bar from "@/components/Bar/Bar";
-import MainSidebar from "@/components/MainSidebar/MainSidebar";
-import CenterBlock from "@/components/CenterBlock/CenterBlock";
-import MainNav from "@/components/MainNav/MainNav";
+// app/page.tsx
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { isAuthenticated } from '@/services/auth/authApi'
 
 export default function Home() {
+  const router = useRouter()
+
+  useEffect(() => {
+    // Проверяем авторизацию и перенаправляем
+    if (isAuthenticated()) {
+      router.push('/music/main')
+    } else {
+      router.push('/auth/signin')
+    }
+  }, [router])
+
   return (
-    <div className={styles.wrapper}>
-      <div className={"container"}>
-        <main className={"main"}>
-          <MainNav />
-          <CenterBlock />
-          <MainSidebar />
-          <Bar />
-        </main>
-        <footer className="footer"></footer>
-      </div>
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      height: '100vh',
+      fontFamily: 'var(--font-montserrat)'
+    }}>
+      <div>Перенаправление...</div>
     </div>
-  );
+  )
 }

@@ -1,19 +1,46 @@
 "use client";
 
-import classnames from "classnames";
+import { useState, useEffect } from "react";
 import styles from "./centerblock.module.css";
-import Search from "../Search/Search";
 import { data } from "@/data";
-import { formatTime, getUniqueValuesByKey } from "../utils/helper";
-import { useState } from "react";
-import Track from "../Track/Track";
-import { useAppSelector } from "../store/store";
+import Track from "@/components/Track/Track";
+import classNames from "classnames";
+import Search from "@/components/Search/Search";
+import { getUniqueValuesByKey } from "@/components/utils/helper";
+import { useAppSelector, useAppDispatch } from "@/components/store/store";
+import { getFavoriteTracks } from "@/services/tracks/tracksApi";
+import { TrackType } from "@/components/sharedTypes/types";
+import { isAuthenticated } from "@/services/auth/authApi";
+import { setFavoriteTracks } from "@/components/store/features/favoritesSlice";
 
 export default function CenterBlock() {
+  const dispatch = useAppDispatch();
   const [showArtistFilter, setShowArtistFilter] = useState(false);
+  const likedTrackIds = useAppSelector((state) => state.favorites.likedTrackIds);
+  
   const artists = getUniqueValuesByKey(data, "author");
   const currentTrack = useAppSelector((state) => state.tracks.currentTrack);
   const isPlaying = useAppSelector((state) => state.tracks.isPlay);
+
+  useEffect(() => {
+    loadFavoriteTracks();
+  }, []);
+
+  const loadFavoriteTracks = async () => {
+    try {
+      if (!isAuthenticated()) return;
+      
+      const favorites = await getFavoriteTracks();
+      dispatch(setFavoriteTracks(favorites));
+      
+    } catch (error: any) {
+      if (error.message.includes('Токен не найден')) {
+        console.log('Пользователь не авторизован');
+      } else {
+        console.error('Ошибка загрузки избранных треков:', error);
+      }
+    }
+  };
 
   const toggleArtistFilter = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -32,7 +59,7 @@ export default function CenterBlock() {
         <div className={styles.filter__title}>Искать по:</div>
         <div className={styles.filter__buttonWrapper}>
           <div
-            className={classnames(styles.filter__button, {
+            className={classNames(styles.filter__button, {
               [styles.active]: showArtistFilter,
             })}
             onClick={toggleArtistFilter}
@@ -58,16 +85,16 @@ export default function CenterBlock() {
       </div>
       <div className={styles.centerblock__content}>
         <div className={styles.content__title}>
-          <div className={classnames(styles.playlistTitle__col, styles.col01)}>
+          <div className={classNames(styles.playlistTitle__col, styles.col01)}>
             Трек
           </div>
-          <div className={classnames(styles.playlistTitle__col, styles.col02)}>
+          <div className={classNames(styles.playlistTitle__col, styles.col02)}>
             Исполнитель
           </div>
-          <div className={classnames(styles.playlistTitle__col, styles.col03)}>
+          <div className={classNames(styles.playlistTitle__col, styles.col03)}>
             Альбом
           </div>
-          <div className={classnames(styles.playlistTitle__col, styles.col04)}>
+          <div className={classNames(styles.playlistTitle__col, styles.col04)}>
             <svg className={styles.playlistTitle__svg}>
               <use xlinkHref="/img/icon/sprite.svg#icon-watch"></use>
             </svg>
@@ -81,6 +108,7 @@ export default function CenterBlock() {
               isCurrent={currentTrack?._id === track._id}
               isPlaying={isPlaying && currentTrack?._id === track._id}
               playlist={data}
+              isLiked={likedTrackIds.includes(track._id)}
             />
           ))}
         </div>

@@ -12,82 +12,172 @@ import {
   toggleShuffle,
 } from "../store/features/trackSlice";
 import ProgressBar from "../ProgressBar/ProgressBar";
+import { addToFavorites, removeFromFavorites } from "@/services/tracks/tracksApi";
+import { isAuthenticated } from "@/services/auth/authApi";
+import { addToFavorites as addToFavoritesRedux, removeFromFavorites as removeFromFavoritesRedux } from "../store/features/favoritesSlice";
+import { useRouter } from "next/navigation";
 
 export default function Bar() {
   const currentTrack = useAppSelector((state) => state.tracks.currentTrack);
   const isPlaying = useAppSelector((state) => state.tracks.isPlay);
-  const isShuffle = useAppSelector((state) => state.tracks.isShuffle); // Получаем состояние перемешивания из store
+  const isShuffle = useAppSelector((state) => state.tracks.isShuffle);
+  const likedTrackIds = useAppSelector((state) => state.favorites.likedTrackIds);
   const dispatch = useAppDispatch();
+  const router = useRouter();
 
   const [isLoop, setIsLoop] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [isLoadedTrack, setIsLoadedTrack] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isLocalPlaying, setIsLocalPlaying] = useState(false);
+  const [isLikeLoading, setIsLikeLoading] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isLocalPlaying, setIsLocalPlaying] = useState(false);
 
+  // Основной эффект для управления воспроизведением при смене трека
   useEffect(() => {
-    setIsLoadedTrack(false);
+    if (currentTrack && audioRef.current) {
+      setIsLoadedTrack(false);
+      setCurrentTime(0);
+      
+      // Перезагружаем аудио элемент с новым треком
+      audioRef.current.load();
+      
+      // Если трек должен играть, запускаем его после загрузки метаданных
+      const handleLoadedMetadata = () => {
+        setIsLoadedTrack(true);
+        if (isPlaying) {
+          audioRef.current?.play().then(() => {
+            setIsLocalPlaying(true);
+          }).catch((error: Error) => {
+            console.error("Ошибка воспроизведения при загрузке:", error);
+          });
+        }
+      };
+
+      audioRef.current.addEventListener('loadedmetadata', handleLoadedMetadata);
+      
+      return () => {
+        audioRef.current?.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      };
+    }
   }, [currentTrack]);
 
-  if (!currentTrack) return null;
+  // Эффект для синхронизации состояния воспроизведения
+  useEffect(() => {
+    if (audioRef.current && isLoadedTrack) {
+      if (isPlaying && !isLocalPlaying) {
+        audioRef.current.play().then(() => {
+          setIsLocalPlaying(true);
+        }).catch((error: Error) => {
+          console.error("Ошибка воспроизведения:", error);
+        });
+      } else if (!isPlaying && isLocalPlaying) {
+        audioRef.current.pause();
+        setIsLocalPlaying(false);
+      }
+    }
+  }, [isPlaying, isLocalPlaying, isLoadedTrack]);
 
-  const togglePlayPause = () => {
-    if (audioRef.current) {
+  const handleLikeClick = async (): Promise<void> => {
+    if (!currentTrack || !isAuthenticated()) {
+      alert('Для добавления в избранное необходимо войти в систему');
+      router.push('/auth/signin');
+      return;
+    }
+    
+    if (isLikeLoading) return;
+    
+    setIsLikeLoading(true);
+    
+    try {
+      const isLiked = likedTrackIds.includes(currentTrack._id);
+      
+      if (isLiked) {
+        await removeFromFavorites(currentTrack._id);
+        dispatch(removeFromFavoritesRedux(currentTrack._id));
+      } else {
+        await addToFavorites(currentTrack._id);
+        dispatch(addToFavoritesRedux(currentTrack));
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      alert('Ошибка при изменении избранного: ' + errorMessage);
+      console.error('Ошибка при изменении избранного:', error);
+    } finally {
+      setIsLikeLoading(false);
+    }
+  };
+
+  const togglePlayPause = (): void => {
+    if (audioRef.current && isLoadedTrack) {
       if (isLocalPlaying) {
         audioRef.current.pause();
         dispatch(setIsPlaying(false));
+        setIsLocalPlaying(false);
       } else {
-        audioRef.current.play();
-        dispatch(setIsPlaying(true));
+        audioRef.current.play().then(() => {
+          dispatch(setIsPlaying(true));
+          setIsLocalPlaying(true);
+        }).catch((error: Error) => {
+          console.error("Ошибка воспроизведения:", error);
+        });
       }
-      setIsLocalPlaying(!isLocalPlaying);
     }
   };
 
-  const onToggleLoop = () => {
+  const onToggleLoop = (): void => {
     setIsLoop(!isLoop);
   };
 
-  const onTimeUpdate = () => {
+  const onTimeUpdate = (): void => {
     if (audioRef.current) {
-      console.log(audioRef.current.volume);
+      setCurrentTime(audioRef.current.currentTime);
     }
   };
 
-  const onLoadMetadata = () => {
-    console.log("Start");
+  const onLoadMetadata = (): void => {
     if (audioRef.current) {
-      audioRef.current?.play();
-      dispatch(setIsPlaying(true));
       setIsLoadedTrack(true);
     }
   };
 
-  /* 1 */
-
-  const onChangeProgress = (e: ChangeEvent<HTMLInputElement>) => {
-    if (audioRef.current) {
+  const onChangeProgress = (e: ChangeEvent<HTMLInputElement>): void => {
+    if (audioRef.current && isLoadedTrack) {
       const inputTime = Number(e.target.value);
       audioRef.current.currentTime = inputTime;
+      setCurrentTime(inputTime);
     }
   };
 
-  const onNextTrack = () => {
+  const onNextTrack = (): void => {
     dispatch(setNextTrack());
   };
 
-  const onPrevTrack = () => {
+  const onPrevTrack = (): void => {
     dispatch(setPrevTrack());
   };
 
-  const onToggleShuffle = () => {
+  const onToggleShuffle = (): void => {
     dispatch(toggleShuffle());
   };
 
-  const handleNotImplemented = () => {
+  const handleEnded = (): void => {
+    setIsLocalPlaying(false);
+    dispatch(setIsPlaying(false));
+    
+    if (!isLoop) {
+      dispatch(setNextTrack());
+    }
+  };
+
+  const handleNotImplemented = (): void => {
     alert("Еще не реализовано");
   };
+
+  if (!currentTrack) return null;
+
+  const isCurrentTrackLiked = currentTrack && likedTrackIds.includes(currentTrack._id);
 
   return (
     <div className={styles.bar}>
@@ -95,14 +185,11 @@ export default function Bar() {
         <audio
           ref={audioRef}
           src={currentTrack.track_file}
-          onEnded={() => {
-            setIsLocalPlaying(false);
-            dispatch(setIsPlaying(false));
-          }}
-          loop={true}
+          onEnded={handleEnded}
+          loop={isLoop}
           onTimeUpdate={onTimeUpdate}
           onLoadedMetadata={onLoadMetadata}
-          onEnded={() => console.log("next track")}
+          preload="metadata"
         />
       )}
 
@@ -110,7 +197,7 @@ export default function Bar() {
         max={audioRef.current?.duration || 0}
         step={0.1}
         readOnly={!isLoadedTrack}
-        value={11}
+        value={currentTime}
         onChange={onChangeProgress}
       />
 
@@ -146,7 +233,9 @@ export default function Bar() {
               </div>
 
               <div
-                className={classNames(styles.player__btnRepeat, styles.btnIcon)}
+                className={classNames(styles.player__btnRepeat, styles.btnIcon, {
+                  [styles.player__btnRepeatActive]: isLoop,
+                })}
                 onClick={onToggleLoop}
               >
                 <svg className={styles.player__btnRepeatSvg}>
@@ -159,7 +248,7 @@ export default function Bar() {
                   styles.player__btnShuffle,
                   styles.btnIcon,
                   {
-                    [styles.player__btnShuffleActive]: isShuffle, // Добавляем класс для активного состояния
+                    [styles.player__btnShuffleActive]: isShuffle,
                   }
                 )}
                 onClick={onToggleShuffle}
@@ -191,8 +280,12 @@ export default function Bar() {
 
               <div className={styles.trackPlay__likeDislike}>
                 <div
-                  className={styles.trackPlay__like}
-                  onClick={handleNotImplemented}
+                  className={classNames(styles.trackPlay__like, {
+                    [styles.trackPlay__likeActive]: isCurrentTrackLiked,
+                    [styles.trackPlay__likeLoading]: isLikeLoading,
+                  })}
+                  onClick={handleLikeClick}
+                  style={{ opacity: isLikeLoading ? 0.5 : 1 }}
                 >
                   <svg className={styles.trackPlay__likeSvg}>
                     <use xlinkHref="/img/icon/sprite.svg#icon-like"></use>
@@ -225,12 +318,13 @@ export default function Bar() {
                   )}
                   type="range"
                   name="range"
-                  onChange={(e) => {
-                    setVolume(Number(e.target.value));
+                  value={volume * 100}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                    const newVolume = Number(e.target.value) / 100;
+                    setVolume(newVolume);
                     if (audioRef.current) {
-                      audioRef.current.volume = Number(e.target.value) / 100;
+                      audioRef.current.volume = newVolume;
                     }
-                    console.log(Number(e.target.value));
                   }}
                 />
               </div>

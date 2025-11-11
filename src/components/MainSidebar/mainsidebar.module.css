@@ -20,6 +20,15 @@
     padding: 12px 0 15px 0;
 }
 
+.sidebar__icon {
+    width: 43px;
+    height: 43px;
+    background-color: #313131;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+
 .sidebar__personalName {
     font-style: normal;
     font-weight: 400;
@@ -29,13 +38,7 @@
     margin-right: 16px;
 }
 
-.sidebar__icon {
-    width: 43px;
-    height: 43px;
-    background-color: #313131;
-    border-radius: 50%;
-    cursor: pointer;
-}
+
 
 .sidebar__block {
     height: 100%;
